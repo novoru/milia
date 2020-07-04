@@ -17,7 +17,7 @@ func enableRawMode() {
 
 	mask := ^(unix.IXON)
 	termios.Iflag &= uint32(mask)
-	mask = ^(unix.ECHO | unix.ICANON | unix.ISIG)
+	mask = ^(unix.ECHO | unix.ICANON | unix.IEXTEN | unix.ISIG)
 	termios.Lflag &= uint32(mask)
 
 	if err := unix.IoctlSetTermios(unix.Stdin, unix.TCSETS, termios); err != nil {
