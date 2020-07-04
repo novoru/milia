@@ -21,8 +21,23 @@ func enableRawMode() {
 	}
 }
 
+func disableRawMode() {
+	termios, err := unix.IoctlGetTermios(unix.Stdin, unix.TCGETS)
+	if err != nil {
+		panic(err)
+	}
+
+	termios.Lflag |= unix.ECHO
+
+	if err := unix.IoctlSetTermios(unix.Stdin, unix.TCSETS, termios); err != nil {
+		panic(err)
+	}
+}
+
 func main() {
 	enableRawMode()
+	defer disableRawMode()
+
 	for {
 		buf := make([]byte, 1)
 		_, err := os.Stdin.Read(buf)
