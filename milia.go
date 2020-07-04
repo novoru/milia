@@ -15,7 +15,7 @@ func enableRawMode() {
 		panic(err)
 	}
 
-	mask := ^(unix.IXON)
+	mask := ^(unix.ICRNL | unix.IXON)
 	termios.Iflag &= uint32(mask)
 	mask = ^(unix.ECHO | unix.ICANON | unix.IEXTEN | unix.ISIG)
 	termios.Lflag &= uint32(mask)
