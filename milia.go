@@ -15,7 +15,9 @@ func enableRawMode() {
 		panic(err)
 	}
 
-	mask := ^(unix.ECHO | unix.ICANON)
+	mask := ^(unix.IXON)
+	termios.Iflag &= uint32(mask)
+	mask = ^(unix.ECHO | unix.ICANON | unix.ISIG)
 	termios.Lflag &= uint32(mask)
 
 	if err := unix.IoctlSetTermios(unix.Stdin, unix.TCSETS, termios); err != nil {
@@ -23,22 +25,20 @@ func enableRawMode() {
 	}
 }
 
-func disableRawMode() {
-	termios, err := unix.IoctlGetTermios(unix.Stdin, unix.TCGETS)
-	if err != nil {
-		panic(err)
-	}
-
-	termios.Lflag |= uint32(unix.ECHO | unix.ICANON)
-
-	if err := unix.IoctlSetTermios(unix.Stdin, unix.TCSETS, termios); err != nil {
+func disableRawMode(origTermios *unix.Termios) {
+	if err := unix.IoctlSetTermios(unix.Stdin, unix.TCSETS, origTermios); err != nil {
 		panic(err)
 	}
 }
 
 func main() {
+	origTermios, err := unix.IoctlGetTermios(unix.Stdin, unix.TCGETS)
+	if err != nil {
+		panic(err)
+	}
+
 	enableRawMode()
-	defer disableRawMode()
+	defer disableRawMode(origTermios)
 
 	for {
 		buf := make([]byte, 1)
