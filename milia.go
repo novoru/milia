@@ -9,7 +9,7 @@ func main() {
 	for {
 		buf := make([]byte, 1)
 		_, err := os.Stdin.Read(buf)
-		if err == io.EOF {
+		if err == io.EOF || buf[0] == 'q' {
 			break
 		}
 	}
