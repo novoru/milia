@@ -10,12 +10,18 @@ func ctrlKey(k byte) byte {
 	return k & 0x1F
 }
 
-// terminal
+// data
+type editorConfig struct {
+	origTermios *unix.Termios
+}
 
-func die(origTermios *unix.Termios) {
+var e editorConfig
+
+// terminal
+func die() {
 	syscall.Write(unix.Stdout, []byte("\x1b[2J"))
 	syscall.Write(unix.Stdout, []byte("\x1b[H"))
-	disableRawMode(origTermios)
+	disableRawMode()
 }
 
 func enableRawMode() {
@@ -40,8 +46,8 @@ func enableRawMode() {
 	}
 }
 
-func disableRawMode(origTermios *unix.Termios) {
-	if err := unix.IoctlSetTermios(unix.Stdin, unix.TCSETS, origTermios); err != nil {
+func disableRawMode() {
+	if err := unix.IoctlSetTermios(unix.Stdin, unix.TCSETS, e.origTermios); err != nil {
 		panic(err)
 	}
 }
@@ -86,13 +92,14 @@ func editorRefreshScreen() {
 
 // init
 func main() {
-	origTermios, err := unix.IoctlGetTermios(unix.Stdin, unix.TCGETS)
+	var err error
+	e.origTermios, err = unix.IoctlGetTermios(unix.Stdin, unix.TCGETS)
 	if err != nil {
 		panic(err)
 	}
 
 	enableRawMode()
-	defer die(origTermios)
+	defer die()
 
 	for persist := true; persist; {
 		editorRefreshScreen()
