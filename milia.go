@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"unicode"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 )
@@ -40,6 +38,27 @@ func disableRawMode(origTermios *unix.Termios) {
 	}
 }
 
+func editorReadKey() byte {
+	buf := make([]byte, 1)
+
+	for size, err := syscall.Read(unix.Stdin, buf); size != 1; {
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return buf[0]
+}
+
+func editorProcessKeypress() bool {
+	switch c := editorReadKey(); c {
+	case ctrlKey('q'):
+		return false
+	}
+
+	return true
+}
+
 func main() {
 	origTermios, err := unix.IoctlGetTermios(unix.Stdin, unix.TCGETS)
 	if err != nil {
@@ -49,20 +68,7 @@ func main() {
 	enableRawMode()
 	defer disableRawMode(origTermios)
 
-	for {
-		buf := make([]byte, 1)
-		_, err := os.Stdin.Read(buf)
-		if err != nil {
-			panic(err)
-		}
-
-		if unicode.IsControl(rune(buf[0])) {
-			fmt.Printf("%d\r\n", buf[0])
-		} else {
-			fmt.Printf("%d ('%c')\r\n", buf[0], buf[0])
-		}
-		if buf[0] == ctrlKey('q') {
-			break
-		}
+	for persist := true; persist; {
+		persist = editorProcessKeypress()
 	}
 }
