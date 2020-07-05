@@ -8,6 +8,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+func ctrlKey(k byte) byte {
+	return k & 0x1F
+}
+
 func enableRawMode() {
 	termios, err := unix.IoctlGetTermios(unix.Stdin, unix.TCGETS)
 	if err != nil {
@@ -57,7 +61,7 @@ func main() {
 		} else {
 			fmt.Printf("%d ('%c')\r\n", buf[0], buf[0])
 		}
-		if buf[0] == 'q' {
+		if buf[0] == ctrlKey('q') {
 			break
 		}
 	}
