@@ -63,10 +63,8 @@ func editorProcessKeypress() bool {
 
 // output
 func editorRefreshScreen() {
-	_, err := syscall.Write(unix.Stdout, []byte("\x1b[2J"))
-	if err != nil {
-		panic(err)
-	}
+	syscall.Write(unix.Stdout, []byte("\x1b[2J"))
+	syscall.Write(unix.Stdout, []byte("\x1b[H"))
 }
 
 // init
