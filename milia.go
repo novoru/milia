@@ -10,6 +10,7 @@ func ctrlKey(k byte) byte {
 	return k & 0x1F
 }
 
+// terminal
 func enableRawMode() {
 	termios, err := unix.IoctlGetTermios(unix.Stdin, unix.TCGETS)
 	if err != nil {
@@ -38,6 +39,7 @@ func disableRawMode(origTermios *unix.Termios) {
 	}
 }
 
+// input
 func editorReadKey() byte {
 	buf := make([]byte, 1)
 
@@ -59,6 +61,15 @@ func editorProcessKeypress() bool {
 	return true
 }
 
+// output
+func editorRefreshScreen() {
+	_, err := syscall.Write(unix.Stdout, []byte("\x1b[2J"))
+	if err != nil {
+		panic(err)
+	}
+}
+
+// init
 func main() {
 	origTermios, err := unix.IoctlGetTermios(unix.Stdin, unix.TCGETS)
 	if err != nil {
@@ -69,6 +80,7 @@ func main() {
 	defer disableRawMode(origTermios)
 
 	for persist := true; persist; {
+		editorRefreshScreen()
 		persist = editorProcessKeypress()
 	}
 }
