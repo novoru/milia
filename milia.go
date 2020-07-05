@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"unicode"
 
@@ -15,12 +14,16 @@ func enableRawMode() {
 		panic(err)
 	}
 
-	mask := ^(unix.ICRNL | unix.IXON)
+	mask := ^(unix.BRKINT | unix.ICRNL | unix.INPCK | unix.ISTRIP | unix.IXON)
 	termios.Iflag &= uint32(mask)
 	mask = ^(unix.OPOST)
 	termios.Oflag &= uint32(mask)
+	termios.Cflag |= uint32(unix.CS8)
 	mask = ^(unix.ECHO | unix.ICANON | unix.IEXTEN | unix.ISIG)
 	termios.Lflag &= uint32(mask)
+
+	termios.Cc[unix.VMIN] = 0
+	termios.Cc[unix.VTIME] = 1
 
 	if err := unix.IoctlSetTermios(unix.Stdin, unix.TCSETS, termios); err != nil {
 		panic(err)
@@ -45,13 +48,17 @@ func main() {
 	for {
 		buf := make([]byte, 1)
 		_, err := os.Stdin.Read(buf)
-		if err == io.EOF || buf[0] == 'q' {
-			break
+		if err != nil {
+			panic(err)
 		}
+
 		if unicode.IsControl(rune(buf[0])) {
 			fmt.Printf("%d\r\n", buf[0])
 		} else {
 			fmt.Printf("%d ('%c')\r\n", buf[0], buf[0])
+		}
+		if buf[0] == 'q' {
+			break
 		}
 	}
 }
