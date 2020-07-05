@@ -13,7 +13,8 @@ func ctrlKey(k byte) byte {
 // terminal
 
 func die(origTermios *unix.Termios) {
-	editorRefreshScreen()
+	syscall.Write(unix.Stdout, []byte("\x1b[2J"))
+	syscall.Write(unix.Stdout, []byte("\x1b[H"))
 	disableRawMode(origTermios)
 }
 
@@ -68,8 +69,18 @@ func editorProcessKeypress() bool {
 }
 
 // output
+func editorDrawRows() {
+	for y := 0; y < 24; y++ {
+		syscall.Write(unix.Stdout, []byte("~\r\n"))
+	}
+}
+
 func editorRefreshScreen() {
 	syscall.Write(unix.Stdout, []byte("\x1b[2J"))
+	syscall.Write(unix.Stdout, []byte("\x1b[H"))
+
+	editorDrawRows()
+
 	syscall.Write(unix.Stdout, []byte("\x1b[H"))
 }
 
