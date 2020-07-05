@@ -17,6 +17,8 @@ func enableRawMode() {
 
 	mask := ^(unix.ICRNL | unix.IXON)
 	termios.Iflag &= uint32(mask)
+	mask = ^(unix.OPOST)
+	termios.Oflag &= uint32(mask)
 	mask = ^(unix.ECHO | unix.ICANON | unix.IEXTEN | unix.ISIG)
 	termios.Lflag &= uint32(mask)
 
@@ -47,9 +49,9 @@ func main() {
 			break
 		}
 		if unicode.IsControl(rune(buf[0])) {
-			fmt.Printf("%d\n", buf[0])
+			fmt.Printf("%d\r\n", buf[0])
 		} else {
-			fmt.Printf("%d ('%c')\n", buf[0], buf[0])
+			fmt.Printf("%d ('%c')\r\n", buf[0], buf[0])
 		}
 	}
 }
