@@ -11,6 +11,12 @@ func ctrlKey(k byte) byte {
 }
 
 // terminal
+
+func die(origTermios *unix.Termios) {
+	editorRefreshScreen()
+	disableRawMode(origTermios)
+}
+
 func enableRawMode() {
 	termios, err := unix.IoctlGetTermios(unix.Stdin, unix.TCGETS)
 	if err != nil {
@@ -75,7 +81,7 @@ func main() {
 	}
 
 	enableRawMode()
-	defer disableRawMode(origTermios)
+	defer die(origTermios)
 
 	for persist := true; persist; {
 		editorRefreshScreen()
