@@ -10,19 +10,19 @@ import (
 // MilliaVersion software version for print
 const MilliaVersion string = "0.0.1"
 
-func ctrlKey(k byte) byte {
-	return k & 0x1F
+func ctrlKey(k byte) int {
+	return int(k & 0x1F)
 }
 
 const (
 	// ArrowLeft  representation of arrow left keys
-	ArrowLeft = 'a'
+	ArrowLeft = iota + 1000
 	// ArrowRight  representation of arrow right keys
-	ArrowRight = 'd'
+	ArrowRight
 	// ArrowUp  representation of arrow up keys
-	ArrowUp = 'w'
+	ArrowUp
 	// ArrowDown  representation of arrow down keys
-	ArrowDown = 's'
+	ArrowDown
 )
 
 // data
@@ -71,7 +71,7 @@ func disableRawMode() {
 }
 
 // input
-func editorMoveCursor(key byte) {
+func editorMoveCursor(key int) {
 	switch key {
 	case ArrowLeft:
 		e.cx--
@@ -84,7 +84,7 @@ func editorMoveCursor(key byte) {
 	}
 }
 
-func editorReadKey() byte {
+func editorReadKey() int {
 	buf := make([]byte, 1)
 
 	for size, err := syscall.Read(unix.Stdin, buf); size != 1; {
@@ -116,7 +116,7 @@ func editorReadKey() byte {
 		return '\x1b'
 	}
 
-	return buf[0]
+	return int(buf[0])
 }
 
 func editorProcessKeypress() bool {
