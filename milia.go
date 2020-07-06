@@ -101,6 +101,7 @@ func editorDrawRows(ab *abuf) {
 	for y := 0; y < int(e.screenRows); y++ {
 		abAppend(ab, "~")
 
+		abAppend(ab, "\x1b[K")
 		if y < int(e.screenRows)-1 {
 			abAppend(ab, "\r\n")
 		}
@@ -111,7 +112,6 @@ func editorRefreshScreen() {
 	ab := new(abuf)
 
 	abAppend(ab, "\x1b[?25l")
-	abAppend(ab, "\x1b[2J")
 	abAppend(ab, "\x1b[H")
 
 	editorDrawRows(ab)
