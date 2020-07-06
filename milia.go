@@ -110,12 +110,14 @@ func editorDrawRows(ab *abuf) {
 func editorRefreshScreen() {
 	ab := new(abuf)
 
+	abAppend(ab, "\x1b[?25l")
 	abAppend(ab, "\x1b[2J")
 	abAppend(ab, "\x1b[H")
 
 	editorDrawRows(ab)
 
 	abAppend(ab, "\x1b[H")
+	abAppend(ab, "\x1b[?25h")
 
 	syscall.Write(unix.Stdout, []byte(ab.b))
 }
