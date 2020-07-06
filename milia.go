@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -15,6 +16,7 @@ func ctrlKey(k byte) byte {
 
 // data
 type editorConfig struct {
+	cx, cy      int
 	screenRows  uint16
 	screeenCols uint16
 	origTermios *unix.Termios
@@ -58,6 +60,19 @@ func disableRawMode() {
 }
 
 // input
+func editorMoveCursor(key byte) {
+	switch key {
+	case 'a':
+		e.cx--
+	case 'd':
+		e.cx++
+	case 'w':
+		e.cy--
+	case 's':
+		e.cy++
+	}
+}
+
 func editorReadKey() byte {
 	buf := make([]byte, 1)
 
@@ -74,6 +89,9 @@ func editorProcessKeypress() bool {
 	switch c := editorReadKey(); c {
 	case ctrlKey('q'):
 		return false
+
+	case 'w', 's', 'a', 'd':
+		editorMoveCursor(c)
 	}
 
 	return true
@@ -103,7 +121,7 @@ func abAppend(ab *abuf, s string) {
 func editorDrawRows(ab *abuf) {
 	for y := 0; y < int(e.screenRows); y++ {
 		if y == int(e.screenRows)/3 {
-			welcome := "Millia editor " + MilliaVersion
+			welcome := "Millia editor -- version " + MilliaVersion
 			padding := (int(e.screeenCols) - len(welcome)) / 2
 			if padding != 0 {
 				abAppend(ab, "~")
@@ -132,7 +150,8 @@ func editorRefreshScreen() {
 
 	editorDrawRows(ab)
 
-	abAppend(ab, "\x1b[H")
+	abAppend(ab, fmt.Sprintf("\x1b[%d;%dH", e.cy+1, e.cx+1))
+
 	abAppend(ab, "\x1b[?25h")
 
 	syscall.Write(unix.Stdout, []byte(ab.b))
@@ -141,6 +160,8 @@ func editorRefreshScreen() {
 // init
 
 func initEditor() {
+	e.cx = 0
+	e.cy = 0
 	getWindowSize(&e.screenRows, &e.screeenCols)
 }
 
