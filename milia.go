@@ -87,24 +87,37 @@ func getWindowSize(rows *uint16, cols *uint16) int {
 	return 0
 }
 
+// append buffer
+type abuf struct {
+	b string
+}
+
+func abAppend(ab *abuf, s string) {
+	ab.b += s
+}
+
 // output
-func editorDrawRows() {
+func editorDrawRows(ab *abuf) {
 	for y := 0; y < int(e.screenRows); y++ {
-		syscall.Write(unix.Stdout, []byte("~"))
+		abAppend(ab, "~")
 
 		if y < int(e.screenRows)-1 {
-			syscall.Write(unix.Stdout, []byte("\r\n"))
+			abAppend(ab, "\r\n")
 		}
 	}
 }
 
 func editorRefreshScreen() {
-	syscall.Write(unix.Stdout, []byte("\x1b[2J"))
-	syscall.Write(unix.Stdout, []byte("\x1b[H"))
+	ab := new(abuf)
 
-	editorDrawRows()
+	abAppend(ab, "\x1b[2J")
+	abAppend(ab, "\x1b[H")
 
-	syscall.Write(unix.Stdout, []byte("\x1b[H"))
+	editorDrawRows(ab)
+
+	abAppend(ab, "\x1b[H")
+
+	syscall.Write(unix.Stdout, []byte(ab.b))
 }
 
 // init
