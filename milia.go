@@ -14,6 +14,17 @@ func ctrlKey(k byte) byte {
 	return k & 0x1F
 }
 
+const (
+	// ArrowLeft  representation of arrow left keys
+	ArrowLeft = 'a'
+	// ArrowRight  representation of arrow right keys
+	ArrowRight = 'd'
+	// ArrowUp  representation of arrow up keys
+	ArrowUp = 'w'
+	// ArrowDown  representation of arrow down keys
+	ArrowDown = 's'
+)
+
 // data
 type editorConfig struct {
 	cx, cy      int
@@ -62,13 +73,13 @@ func disableRawMode() {
 // input
 func editorMoveCursor(key byte) {
 	switch key {
-	case 'a':
+	case ArrowLeft:
 		e.cx--
-	case 'd':
+	case ArrowRight:
 		e.cx++
-	case 'w':
+	case ArrowUp:
 		e.cy--
-	case 's':
+	case ArrowDown:
 		e.cy++
 	}
 }
@@ -82,6 +93,29 @@ func editorReadKey() byte {
 		}
 	}
 
+	if buf[0] == '\x1b' {
+		seq := make([]byte, 3)
+		_, err := syscall.Read(unix.Stdin, seq)
+		if err != nil {
+			panic(err)
+		}
+
+		if seq[0] == '[' {
+			switch seq[1] {
+			case 'A':
+				return ArrowUp
+			case 'B':
+				return ArrowDown
+			case 'C':
+				return ArrowRight
+			case 'D':
+				return ArrowLeft
+			}
+		}
+
+		return '\x1b'
+	}
+
 	return buf[0]
 }
 
@@ -90,7 +124,7 @@ func editorProcessKeypress() bool {
 	case ctrlKey('q'):
 		return false
 
-	case 'w', 's', 'a', 'd':
+	case ArrowUp, ArrowDown, ArrowLeft, ArrowRight:
 		editorMoveCursor(c)
 	}
 
