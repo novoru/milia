@@ -90,7 +90,11 @@ func getWindowSize(rows *uint16, cols *uint16) int {
 // output
 func editorDrawRows() {
 	for y := 0; y < int(e.screenRows); y++ {
-		syscall.Write(unix.Stdout, []byte("~\r\n"))
+		syscall.Write(unix.Stdout, []byte("~"))
+
+		if y < int(e.screenRows)-1 {
+			syscall.Write(unix.Stdout, []byte("\r\n"))
+		}
 	}
 }
 
