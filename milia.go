@@ -6,6 +6,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// MilliaVersion software version for print
+const MilliaVersion string = "0.0.1"
+
 func ctrlKey(k byte) byte {
 	return k & 0x1F
 }
@@ -99,7 +102,20 @@ func abAppend(ab *abuf, s string) {
 // output
 func editorDrawRows(ab *abuf) {
 	for y := 0; y < int(e.screenRows); y++ {
-		abAppend(ab, "~")
+		if y == int(e.screenRows)/3 {
+			welcome := "Millia editor " + MilliaVersion
+			padding := (int(e.screeenCols) - len(welcome)) / 2
+			if padding != 0 {
+				abAppend(ab, "~")
+				padding--
+			}
+			for ; padding != 0; padding-- {
+				abAppend(ab, " ")
+			}
+			abAppend(ab, welcome)
+		} else {
+			abAppend(ab, "~")
+		}
 
 		abAppend(ab, "\x1b[K")
 		if y < int(e.screenRows)-1 {
