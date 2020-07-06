@@ -74,13 +74,21 @@ func disableRawMode() {
 func editorMoveCursor(key int) {
 	switch key {
 	case ArrowLeft:
-		e.cx--
+		if e.cx != 0 {
+			e.cx--
+		}
 	case ArrowRight:
-		e.cx++
+		if e.cx != int(e.screeenCols)-1 {
+			e.cx++
+		}
 	case ArrowUp:
-		e.cy--
+		if e.cy != 0 {
+			e.cy--
+		}
 	case ArrowDown:
-		e.cy++
+		if e.cy != int(e.screenRows)-1 {
+			e.cy++
+		}
 	}
 }
 
