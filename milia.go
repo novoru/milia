@@ -23,6 +23,10 @@ const (
 	ArrowUp
 	// ArrowDown  representation of arrow down keys
 	ArrowDown
+	// PageUp  representation of pageup keys
+	PageUp
+	// PageDown  representation of pagedown keys
+	PageDown
 )
 
 // data
@@ -109,15 +113,26 @@ func editorReadKey() int {
 		}
 
 		if seq[0] == '[' {
-			switch seq[1] {
-			case 'A':
-				return ArrowUp
-			case 'B':
-				return ArrowDown
-			case 'C':
-				return ArrowRight
-			case 'D':
-				return ArrowLeft
+			if seq[1] >= '0' && seq[1] <= '9' {
+				if seq[2] == '~' {
+					switch seq[1] {
+					case '5':
+						return PageUp
+					case '6':
+						return PageDown
+					}
+				}
+			} else {
+				switch seq[1] {
+				case 'A':
+					return ArrowUp
+				case 'B':
+					return ArrowDown
+				case 'C':
+					return ArrowRight
+				case 'D':
+					return ArrowLeft
+				}
 			}
 		}
 
@@ -131,7 +146,15 @@ func editorProcessKeypress() bool {
 	switch c := editorReadKey(); c {
 	case ctrlKey('q'):
 		return false
-
+	case PageUp, PageDown:
+		times := int(e.screenRows)
+		for ; times != 0; times-- {
+			if c == PageUp {
+				editorMoveCursor(ArrowUp)
+			} else {
+				editorMoveCursor(ArrowDown)
+			}
+		}
 	case ArrowUp, ArrowDown, ArrowLeft, ArrowRight:
 		editorMoveCursor(c)
 	}
