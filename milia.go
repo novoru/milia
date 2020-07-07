@@ -23,6 +23,8 @@ const (
 	ArrowUp
 	// ArrowDown  representation of arrow down key
 	ArrowDown
+	// DelKey  representation of delete key
+	DelKey
 	// HomeKey  representation of home key
 	HomeKey
 	// EndKey  representation of end key
@@ -122,6 +124,8 @@ func editorReadKey() int {
 					switch seq[1] {
 					case '1':
 						return HomeKey
+					case '3':
+						return DelKey
 					case '4':
 						return EndKey
 					case '5':
