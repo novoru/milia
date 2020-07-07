@@ -39,16 +39,11 @@ const (
 
 // data
 
-type erow struct {
-	s string
-}
-
 type editorConfig struct {
 	cx, cy      int
 	screenRows  uint16
 	screeenCols uint16
-	numrows     int
-	row         erow
+	rows        []string
 	origTermios *unix.Termios
 }
 
@@ -213,6 +208,12 @@ func getWindowSize(rows *uint16, cols *uint16) int {
 	return 0
 }
 
+// row operations
+
+func editorAppendRow(s string) {
+	e.rows = append(e.rows, s)
+}
+
 // file I/O
 
 func editorOpen(fileName string) {
@@ -224,9 +225,8 @@ func editorOpen(fileName string) {
 	}
 
 	scanner := bufio.NewScanner(file)
-	if scanner.Scan() {
-		e.row.s = scanner.Text()
-		e.numrows = 1
+	for scanner.Scan() {
+		editorAppendRow(scanner.Text())
 	}
 }
 
@@ -242,8 +242,8 @@ func abAppend(ab *abuf, s string) {
 // output
 func editorDrawRows(ab *abuf) {
 	for y := 0; y < int(e.screenRows); y++ {
-		if y >= e.numrows {
-			if e.numrows == 0 && y == int(e.screenRows)/3 {
+		if y >= len(e.rows) {
+			if len(e.rows) == 0 && y == int(e.screenRows)/3 {
 				welcome := "Millia editor -- version " + MilliaVersion
 				padding := (int(e.screeenCols) - len(welcome)) / 2
 				if padding != 0 {
@@ -258,7 +258,7 @@ func editorDrawRows(ab *abuf) {
 				abAppend(ab, "~")
 			}
 		} else {
-			abAppend(ab, e.row.s)
+			abAppend(ab, e.rows[y])
 		}
 
 		abAppend(ab, "\x1b[K")
@@ -288,7 +288,7 @@ func editorRefreshScreen() {
 func initEditor() {
 	e.cx = 0
 	e.cy = 0
-	e.numrows = 0
+	e.rows = make([]string, 0)
 	getWindowSize(&e.screenRows, &e.screeenCols)
 }
 
