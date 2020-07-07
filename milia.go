@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -36,10 +38,17 @@ const (
 )
 
 // data
+
+type erow struct {
+	s string
+}
+
 type editorConfig struct {
 	cx, cy      int
 	screenRows  uint16
 	screeenCols uint16
+	numrows     int
+	row         erow
 	origTermios *unix.Termios
 }
 
@@ -204,6 +213,23 @@ func getWindowSize(rows *uint16, cols *uint16) int {
 	return 0
 }
 
+// file I/O
+
+func editorOpen(fileName string) {
+	file, err := os.Open(fileName)
+	defer file.Close()
+
+	if err != nil {
+		panic(err)
+	}
+
+	scanner := bufio.NewScanner(file)
+	if scanner.Scan() {
+		e.row.s = scanner.Text()
+		e.numrows = 1
+	}
+}
+
 // append buffer
 type abuf struct {
 	b string
@@ -216,19 +242,23 @@ func abAppend(ab *abuf, s string) {
 // output
 func editorDrawRows(ab *abuf) {
 	for y := 0; y < int(e.screenRows); y++ {
-		if y == int(e.screenRows)/3 {
-			welcome := "Millia editor -- version " + MilliaVersion
-			padding := (int(e.screeenCols) - len(welcome)) / 2
-			if padding != 0 {
+		if y >= e.numrows {
+			if e.numrows == 0 && y == int(e.screenRows)/3 {
+				welcome := "Millia editor -- version " + MilliaVersion
+				padding := (int(e.screeenCols) - len(welcome)) / 2
+				if padding != 0 {
+					abAppend(ab, "~")
+					padding--
+				}
+				for ; padding != 0; padding-- {
+					abAppend(ab, " ")
+				}
+				abAppend(ab, welcome)
+			} else {
 				abAppend(ab, "~")
-				padding--
 			}
-			for ; padding != 0; padding-- {
-				abAppend(ab, " ")
-			}
-			abAppend(ab, welcome)
 		} else {
-			abAppend(ab, "~")
+			abAppend(ab, e.row.s)
 		}
 
 		abAppend(ab, "\x1b[K")
@@ -258,6 +288,7 @@ func editorRefreshScreen() {
 func initEditor() {
 	e.cx = 0
 	e.cy = 0
+	e.numrows = 0
 	getWindowSize(&e.screenRows, &e.screeenCols)
 }
 
@@ -271,6 +302,10 @@ func main() {
 	enableRawMode()
 	initEditor()
 	defer die()
+
+	if len(os.Args) >= 2 {
+		editorOpen(os.Args[1])
+	}
 
 	for persist := true; persist; {
 		editorRefreshScreen()
