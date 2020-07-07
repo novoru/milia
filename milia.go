@@ -15,17 +15,21 @@ func ctrlKey(k byte) int {
 }
 
 const (
-	// ArrowLeft  representation of arrow left keys
+	// ArrowLeft  representation of arrow left key
 	ArrowLeft = iota + 1000
-	// ArrowRight  representation of arrow right keys
+	// ArrowRight  representation of arrow right key
 	ArrowRight
-	// ArrowUp  representation of arrow up keys
+	// ArrowUp  representation of arrow up key
 	ArrowUp
-	// ArrowDown  representation of arrow down keys
+	// ArrowDown  representation of arrow down key
 	ArrowDown
-	// PageUp  representation of pageup keys
+	// HomeKey  representation of home key
+	HomeKey
+	// EndKey  representation of end key
+	EndKey
+	// PageUp  representation of pageup key
 	PageUp
-	// PageDown  representation of pagedown keys
+	// PageDown  representation of pagedown key
 	PageDown
 )
 
@@ -116,10 +120,18 @@ func editorReadKey() int {
 			if seq[1] >= '0' && seq[1] <= '9' {
 				if seq[2] == '~' {
 					switch seq[1] {
+					case '1':
+						return HomeKey
+					case '4':
+						return EndKey
 					case '5':
 						return PageUp
 					case '6':
 						return PageDown
+					case '7':
+						return HomeKey
+					case '8':
+						return EndKey
 					}
 				}
 			} else {
@@ -132,7 +144,18 @@ func editorReadKey() int {
 					return ArrowRight
 				case 'D':
 					return ArrowLeft
+				case 'H':
+					return HomeKey
+				case 'F':
+					return EndKey
 				}
+			}
+		} else if seq[0] == 'O' {
+			switch seq[1] {
+			case 'H':
+				return HomeKey
+			case 'F':
+				return EndKey
 			}
 		}
 
@@ -146,6 +169,10 @@ func editorProcessKeypress() bool {
 	switch c := editorReadKey(); c {
 	case ctrlKey('q'):
 		return false
+	case HomeKey:
+		e.cx = 0
+	case EndKey:
+		e.cx = int(e.screeenCols) - 1
 	case PageUp, PageDown:
 		times := int(e.screenRows)
 		for ; times != 0; times-- {
