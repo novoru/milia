@@ -42,6 +42,7 @@ const (
 type editorConfig struct {
 	cx, cy      int
 	rowOff      int
+	colOff      int
 	screenRows  uint16
 	screeenCols uint16
 	rows        []string
@@ -93,9 +94,7 @@ func editorMoveCursor(key int) {
 			e.cx--
 		}
 	case ArrowRight:
-		if e.cx != int(e.screeenCols)-1 {
-			e.cx++
-		}
+		e.cx++
 	case ArrowUp:
 		if e.cy != 0 {
 			e.cy--
@@ -249,6 +248,12 @@ func editorScroll() {
 	if e.cy >= e.rowOff+int(e.screenRows) {
 		e.rowOff = e.cy - int(e.screenRows) + 1
 	}
+	if e.cx < e.colOff {
+		e.colOff = e.cx
+	}
+	if e.cx >= e.colOff+int(e.screeenCols) {
+		e.colOff = e.cx - int(e.screeenCols) + 1
+	}
 }
 
 func editorDrawRows(ab *abuf) {
@@ -270,7 +275,13 @@ func editorDrawRows(ab *abuf) {
 				abAppend(ab, "~")
 			}
 		} else {
-			abAppend(ab, e.rows[fileRow])
+			len := len(e.rows[fileRow]) - e.colOff
+			if len > 0 {
+				if len > int(e.screeenCols) {
+					len = int(e.screeenCols)
+				}
+				abAppend(ab, e.rows[fileRow][e.colOff:e.colOff+len])
+			}
 		}
 
 		abAppend(ab, "\x1b[K")
@@ -290,7 +301,8 @@ func editorRefreshScreen() {
 
 	editorDrawRows(ab)
 
-	abAppend(ab, fmt.Sprintf("\x1b[%d;%dH", (e.cy-e.rowOff)+1, e.cx+1))
+	abAppend(ab, fmt.Sprintf("\x1b[%d;%dH",
+		(e.cy-e.rowOff)+1, (e.cx-e.colOff)+1))
 
 	abAppend(ab, "\x1b[?25h")
 
@@ -303,6 +315,7 @@ func initEditor() {
 	e.cx = 0
 	e.cy = 0
 	e.rowOff = 0
+	e.colOff = 0
 	e.rows = make([]string, 0)
 	getWindowSize(&e.screenRows, &e.screeenCols)
 }
