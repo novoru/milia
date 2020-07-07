@@ -88,13 +88,20 @@ func disableRawMode() {
 
 // input
 func editorMoveCursor(key int) {
+	var row string
+	if e.cy < len(e.rows) {
+		row = e.rows[e.cy]
+	}
+
 	switch key {
 	case ArrowLeft:
 		if e.cx != 0 {
 			e.cx--
 		}
 	case ArrowRight:
-		e.cx++
+		if row != "" && e.cx < len(row) {
+			e.cx++
+		}
 	case ArrowUp:
 		if e.cy != 0 {
 			e.cy--
