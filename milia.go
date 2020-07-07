@@ -41,6 +41,7 @@ const (
 
 type editorConfig struct {
 	cx, cy      int
+	rowOff      int
 	screenRows  uint16
 	screeenCols uint16
 	rows        []string
@@ -100,7 +101,7 @@ func editorMoveCursor(key int) {
 			e.cy--
 		}
 	case ArrowDown:
-		if e.cy != int(e.screenRows)-1 {
+		if e.cy != len(e.rows) {
 			e.cy++
 		}
 	}
@@ -240,9 +241,20 @@ func abAppend(ab *abuf, s string) {
 }
 
 // output
+
+func editorScroll() {
+	if e.cy < e.rowOff {
+		e.rowOff = e.cy
+	}
+	if e.cy >= e.rowOff+int(e.screenRows) {
+		e.rowOff = e.cy - int(e.screenRows) + 1
+	}
+}
+
 func editorDrawRows(ab *abuf) {
 	for y := 0; y < int(e.screenRows); y++ {
-		if y >= len(e.rows) {
+		fileRow := y + e.rowOff
+		if fileRow >= len(e.rows) {
 			if len(e.rows) == 0 && y == int(e.screenRows)/3 {
 				welcome := "Millia editor -- version " + MilliaVersion
 				padding := (int(e.screeenCols) - len(welcome)) / 2
@@ -258,7 +270,7 @@ func editorDrawRows(ab *abuf) {
 				abAppend(ab, "~")
 			}
 		} else {
-			abAppend(ab, e.rows[y])
+			abAppend(ab, e.rows[fileRow])
 		}
 
 		abAppend(ab, "\x1b[K")
@@ -269,6 +281,8 @@ func editorDrawRows(ab *abuf) {
 }
 
 func editorRefreshScreen() {
+	editorScroll()
+
 	ab := new(abuf)
 
 	abAppend(ab, "\x1b[?25l")
@@ -276,7 +290,7 @@ func editorRefreshScreen() {
 
 	editorDrawRows(ab)
 
-	abAppend(ab, fmt.Sprintf("\x1b[%d;%dH", e.cy+1, e.cx+1))
+	abAppend(ab, fmt.Sprintf("\x1b[%d;%dH", (e.cy-e.rowOff)+1, e.cx+1))
 
 	abAppend(ab, "\x1b[?25h")
 
@@ -288,6 +302,7 @@ func editorRefreshScreen() {
 func initEditor() {
 	e.cx = 0
 	e.cy = 0
+	e.rowOff = 0
 	e.rows = make([]string, 0)
 	getWindowSize(&e.screenRows, &e.screeenCols)
 }
