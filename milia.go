@@ -97,6 +97,9 @@ func editorMoveCursor(key int) {
 	case ArrowLeft:
 		if e.cx != 0 {
 			e.cx--
+		} else if e.cy > 0 {
+			e.cy--
+			e.cx = len(e.rows[e.cy])
 		}
 	case ArrowRight:
 		if row != "" && e.cx < len(row) {
