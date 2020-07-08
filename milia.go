@@ -12,6 +12,9 @@ import (
 // MilliaVersion software version for print
 const MilliaVersion string = "0.0.1"
 
+// MilliaTabStop length of a tab stop
+const MilliaTabStop int = 8
+
 func ctrlKey(k byte) int {
 	return int(k & 0x1F)
 }
@@ -39,13 +42,18 @@ const (
 
 // data
 
+type erow struct {
+	s      string
+	render string
+}
+
 type editorConfig struct {
 	cx, cy      int
 	rowOff      int
 	colOff      int
 	screenRows  uint16
 	screeenCols uint16
-	rows        []string
+	rows        []erow
 	origTermios *unix.Termios
 }
 
@@ -88,7 +96,7 @@ func disableRawMode() {
 
 // input
 func editorMoveCursor(key int) {
-	var row string
+	var row erow
 	if e.cy < len(e.rows) {
 		row = e.rows[e.cy]
 	}
@@ -99,12 +107,12 @@ func editorMoveCursor(key int) {
 			e.cx--
 		} else if e.cy > 0 {
 			e.cy--
-			e.cx = len(e.rows[e.cy])
+			e.cx = len(e.rows[e.cy].s)
 		}
 	case ArrowRight:
-		if row != "" && e.cx < len(row) {
+		if row.s != "" && e.cx < len(row.s) {
 			e.cx++
-		} else if e.cx == len(row) {
+		} else if e.cx == len(row.s) {
 			e.cy++
 			e.cx = 0
 		}
@@ -187,7 +195,7 @@ func editorReadKey() int {
 }
 
 func editorProcessKeypress() bool {
-	var row string
+	var row erow
 	if e.cy < len(e.rows) {
 		row = e.rows[e.cy]
 	}
@@ -198,7 +206,7 @@ func editorProcessKeypress() bool {
 	case HomeKey:
 		e.cx = 0
 	case EndKey:
-		e.cx = len(row)
+		e.cx = len(row.s)
 	case PageUp, PageDown:
 		times := int(e.screenRows)
 		for ; times != 0; times-- {
@@ -228,8 +236,26 @@ func getWindowSize(rows *uint16, cols *uint16) int {
 
 // row operations
 
+func editorUpdateRow(row *erow) {
+	i := 0
+	for j := 0; j < len(row.s); j++ {
+		if row.s[j] == '\t' {
+			row.render += " "
+			i++
+			for ; i%MilliaTabStop != 0; i++ {
+				row.render += " "
+			}
+		} else {
+			row.render += string(row.s[j])
+			i++
+		}
+	}
+
+}
+
 func editorAppendRow(s string) {
-	e.rows = append(e.rows, s)
+	e.rows = append(e.rows, erow{s, ""})
+	editorUpdateRow(&e.rows[len(e.rows)-1])
 }
 
 // file I/O
@@ -293,12 +319,12 @@ func editorDrawRows(ab *abuf) {
 				abAppend(ab, "~")
 			}
 		} else {
-			len := len(e.rows[fileRow]) - e.colOff
+			len := len(e.rows[fileRow].render) - e.colOff
 			if len > 0 {
 				if len > int(e.screeenCols) {
 					len = int(e.screeenCols)
 				}
-				abAppend(ab, e.rows[fileRow][e.colOff:e.colOff+len])
+				abAppend(ab, e.rows[fileRow].render[e.colOff:e.colOff+len])
 			}
 		}
 
@@ -334,7 +360,7 @@ func initEditor() {
 	e.cy = 0
 	e.rowOff = 0
 	e.colOff = 0
-	e.rows = make([]string, 0)
+	e.rows = make([]erow, 0)
 	getWindowSize(&e.screenRows, &e.screeenCols)
 }
 
