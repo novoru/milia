@@ -104,6 +104,9 @@ func editorMoveCursor(key int) {
 	case ArrowRight:
 		if row != "" && e.cx < len(row) {
 			e.cx++
+		} else if e.cx == len(row) {
+			e.cy++
+			e.cx = 0
 		}
 	case ArrowUp:
 		if e.cy != 0 {
@@ -184,13 +187,18 @@ func editorReadKey() int {
 }
 
 func editorProcessKeypress() bool {
+	var row string
+	if e.cy < len(e.rows) {
+		row = e.rows[e.cy]
+	}
+
 	switch c := editorReadKey(); c {
 	case ctrlKey('q'):
 		return false
 	case HomeKey:
 		e.cx = 0
 	case EndKey:
-		e.cx = int(e.screeenCols) - 1
+		e.cx = len(row)
 	case PageUp, PageDown:
 		times := int(e.screenRows)
 		for ; times != 0; times-- {
