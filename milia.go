@@ -49,6 +49,7 @@ type erow struct {
 
 type editorConfig struct {
 	cx, cy      int
+	rx          int
 	rowOff      int
 	colOff      int
 	screenRows  uint16
@@ -119,10 +120,18 @@ func editorMoveCursor(key int) {
 	case ArrowUp:
 		if e.cy != 0 {
 			e.cy--
+			if len(e.rows[e.cy].render) < e.cx {
+				e.cx = len(e.rows[e.cy].render)
+			}
 		}
 	case ArrowDown:
 		if e.cy != len(e.rows) {
 			e.cy++
+			if e.cy < len(e.rows) {
+				if len(e.rows[e.cy].render) < e.cx {
+					e.cx = len(e.rows[e.cy].render)
+				}
+			}
 		}
 	}
 }
@@ -236,6 +245,18 @@ func getWindowSize(rows *uint16, cols *uint16) int {
 
 // row operations
 
+func editorRowCxToRx(row *erow, cx int) int {
+	rx := 0
+	for i := 0; i < cx; i++ {
+		if row.s[i] == '\t' {
+			rx += (MilliaTabStop - 1) - (rx % MilliaTabStop)
+		}
+		rx++
+	}
+
+	return rx
+}
+
 func editorUpdateRow(row *erow) {
 	i := 0
 	for j := 0; j < len(row.s); j++ {
@@ -286,17 +307,22 @@ func abAppend(ab *abuf, s string) {
 // output
 
 func editorScroll() {
+	e.rx = 0
+	if e.cy < len(e.rows) {
+		e.rx = editorRowCxToRx(&e.rows[e.cy], e.cx)
+	}
+
 	if e.cy < e.rowOff {
 		e.rowOff = e.cy
 	}
 	if e.cy >= e.rowOff+int(e.screenRows) {
 		e.rowOff = e.cy - int(e.screenRows) + 1
 	}
-	if e.cx < e.colOff {
-		e.colOff = e.cx
+	if e.rx < e.colOff {
+		e.colOff = e.rx
 	}
-	if e.cx >= e.colOff+int(e.screeenCols) {
-		e.colOff = e.cx - int(e.screeenCols) + 1
+	if e.rx >= e.colOff+int(e.screeenCols) {
+		e.colOff = e.rx - int(e.screeenCols) + 1
 	}
 }
 
@@ -346,7 +372,7 @@ func editorRefreshScreen() {
 	editorDrawRows(ab)
 
 	abAppend(ab, fmt.Sprintf("\x1b[%d;%dH",
-		(e.cy-e.rowOff)+1, (e.cx-e.colOff)+1))
+		(e.cy-e.rowOff)+1, (e.rx-e.colOff)+1))
 
 	abAppend(ab, "\x1b[?25h")
 
@@ -358,6 +384,7 @@ func editorRefreshScreen() {
 func initEditor() {
 	e.cx = 0
 	e.cy = 0
+	e.rx = 0
 	e.rowOff = 0
 	e.colOff = 0
 	e.rows = make([]erow, 0)
