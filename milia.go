@@ -117,7 +117,7 @@ func editorMoveCursor(key int) {
 	case ArrowRight:
 		if row.s != "" && e.cx < len(row.s) {
 			e.cx++
-		} else if e.cx == len(row.s) {
+		} else if row.s != "" && e.cx == len(row.s) {
 			e.cy++
 			e.cx = 0
 		}
@@ -235,6 +235,8 @@ func editorProcessKeypress() bool {
 		}
 	case ArrowUp, ArrowDown, ArrowLeft, ArrowRight:
 		editorMoveCursor(c)
+	default:
+		editorInsertChar(c)
 	}
 
 	return true
@@ -255,7 +257,7 @@ func getWindowSize(rows *uint16, cols *uint16) int {
 
 func editorRowCxToRx(row *erow, cx int) int {
 	rx := 0
-	for i := 0; i < cx; i++ {
+	for i := 0; i < cx && i < len(row.s); i++ {
 		if row.s[i] == '\t' {
 			rx += (MilliaTabStop - 1) - (rx % MilliaTabStop)
 		}
@@ -266,6 +268,7 @@ func editorRowCxToRx(row *erow, cx int) int {
 }
 
 func editorUpdateRow(row *erow) {
+	row.render = ""
 	i := 0
 	for j := 0; j < len(row.s); j++ {
 		if row.s[j] == '\t' {
@@ -285,6 +288,24 @@ func editorUpdateRow(row *erow) {
 func editorAppendRow(s string) {
 	e.rows = append(e.rows, erow{s, ""})
 	editorUpdateRow(&e.rows[len(e.rows)-1])
+}
+
+func editorRowInsertChar(row *erow, at int, c int) {
+	if at < 0 || at > len(row.s) {
+		at = len(row.s)
+	}
+	row.s = row.s[:at] + string(c) + row.s[at:]
+	editorUpdateRow(row)
+}
+
+// editor operations
+
+func editorInsertChar(c int) {
+	if e.cy == len(e.rows) {
+		editorAppendRow("")
+	}
+	editorRowInsertChar(&e.rows[e.cy], e.cx, c)
+	e.cx++
 }
 
 // file I/O
