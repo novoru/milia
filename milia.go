@@ -217,8 +217,15 @@ func editorProcessKeypress() bool {
 	case EndKey:
 		e.cx = len(row.s)
 	case PageUp, PageDown:
-		times := int(e.screenRows)
-		for ; times != 0; times-- {
+		if c == PageUp {
+			e.cy = e.rowOff
+		} else if c == PageDown {
+			e.cy = e.rowOff + int(e.screenRows) - 1
+			if e.cy > len(e.rows) {
+				e.cy = len(e.rows)
+			}
+		}
+		for times := int(e.screenRows); times != 0; times-- {
 			if c == PageUp {
 				editorMoveCursor(ArrowUp)
 			} else {
