@@ -21,6 +21,8 @@ func ctrlKey(k byte) int {
 }
 
 const (
+	// BackSpace  representation of backspace key
+	BackSpace = iota + 127
 	// ArrowLeft  representation of arrow left key
 	ArrowLeft = iota + 1000
 	// ArrowRight  representation of arrow right key
@@ -209,6 +211,9 @@ func editorReadKey() int {
 
 func editorProcessKeypress() bool {
 	switch c := editorReadKey(); c {
+	case '\r':
+		// TODO
+		break
 	case ctrlKey('q'):
 		return false
 	case HomeKey:
@@ -217,6 +222,9 @@ func editorProcessKeypress() bool {
 		if e.cy < len(e.rows) {
 			e.cx = len(e.rows[e.cy].s)
 		}
+	case BackSpace, ctrlKey('h'), DelKey:
+		// TODO
+		break
 	case PageUp, PageDown:
 		if c == PageUp {
 			e.cy = e.rowOff
@@ -235,6 +243,8 @@ func editorProcessKeypress() bool {
 		}
 	case ArrowUp, ArrowDown, ArrowLeft, ArrowRight:
 		editorMoveCursor(c)
+	case ctrlKey('l'), '\x1b':
+		break
 	default:
 		editorInsertChar(c)
 	}
