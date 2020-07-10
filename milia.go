@@ -204,18 +204,15 @@ func editorReadKey() int {
 }
 
 func editorProcessKeypress() bool {
-	var row erow
-	if e.cy < len(e.rows) {
-		row = e.rows[e.cy]
-	}
-
 	switch c := editorReadKey(); c {
 	case ctrlKey('q'):
 		return false
 	case HomeKey:
 		e.cx = 0
 	case EndKey:
-		e.cx = len(row.s)
+		if e.cy < len(e.rows) {
+			e.cx = len(e.rows[e.cy].s)
+		}
 	case PageUp, PageDown:
 		if c == PageUp {
 			e.cy = e.rowOff
