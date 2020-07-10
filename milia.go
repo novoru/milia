@@ -55,6 +55,7 @@ type editorConfig struct {
 	screenRows  uint16
 	screeenCols uint16
 	rows        []erow
+	fileName    string
 	origTermios *unix.Termios
 }
 
@@ -289,6 +290,8 @@ func editorOpen(fileName string) {
 	file, err := os.Open(fileName)
 	defer file.Close()
 
+	e.fileName = fileName
+
 	if err != nil {
 		panic(err)
 	}
@@ -359,10 +362,35 @@ func editorDrawRows(ab *abuf) {
 		}
 
 		abAppend(ab, "\x1b[K")
-		if y < int(e.screenRows)-1 {
-			abAppend(ab, "\r\n")
+		abAppend(ab, "\r\n")
+	}
+}
+
+func editorDrawStatusBar(ab *abuf) {
+	abAppend(ab, "\x1b[7m")
+
+	fileName := "[No Name]"
+	if e.fileName != "" {
+		fileName = e.fileName
+	}
+
+	status := fmt.Sprintf("%.20s - %d lines", fileName, len(e.rows))
+	rstatus := fmt.Sprintf("%d/%d", e.cy+1, len(e.rows))
+	l := len(status)
+	if l > int(e.screeenCols) {
+		l = int(e.screeenCols)
+	}
+	abAppend(ab, status)
+
+	for ; l < int(e.screeenCols); l++ {
+		if int(e.screeenCols)-l == len(rstatus) {
+			abAppend(ab, rstatus)
+			break
+		} else {
+			abAppend(ab, " ")
 		}
 	}
+	abAppend(ab, "\x1b[m")
 }
 
 func editorRefreshScreen() {
@@ -374,6 +402,7 @@ func editorRefreshScreen() {
 	abAppend(ab, "\x1b[H")
 
 	editorDrawRows(ab)
+	editorDrawStatusBar(ab)
 
 	abAppend(ab, fmt.Sprintf("\x1b[%d;%dH",
 		(e.cy-e.rowOff)+1, (e.rx-e.colOff)+1))
@@ -392,7 +421,10 @@ func initEditor() {
 	e.rowOff = 0
 	e.colOff = 0
 	e.rows = make([]erow, 0)
+	e.fileName = ""
+
 	getWindowSize(&e.screenRows, &e.screeenCols)
+	e.screenRows--
 }
 
 func main() {
