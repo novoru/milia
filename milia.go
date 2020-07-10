@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -48,15 +49,17 @@ type erow struct {
 }
 
 type editorConfig struct {
-	cx, cy      int
-	rx          int
-	rowOff      int
-	colOff      int
-	screenRows  uint16
-	screeenCols uint16
-	rows        []erow
-	fileName    string
-	origTermios *unix.Termios
+	cx, cy        int
+	rx            int
+	rowOff        int
+	colOff        int
+	screenRows    uint16
+	screeenCols   uint16
+	rows          []erow
+	fileName      string
+	statusMsg     string
+	statusMsgTime time.Time
+	origTermios   *unix.Termios
 }
 
 var e editorConfig
@@ -391,6 +394,19 @@ func editorDrawStatusBar(ab *abuf) {
 		}
 	}
 	abAppend(ab, "\x1b[m")
+	abAppend(ab, "\r\n")
+}
+
+func editorDrawMessageBar(ab *abuf) {
+	abAppend(ab, "\x1b[K")
+	msgLen := len(e.statusMsg)
+	if msgLen > int(e.screeenCols) {
+		msgLen = int(e.screeenCols)
+	}
+
+	if msgLen != 0 && time.Now().Sub(e.statusMsgTime).Seconds() < 5 {
+		abAppend(ab, e.statusMsg)
+	}
 }
 
 func editorRefreshScreen() {
@@ -403,6 +419,7 @@ func editorRefreshScreen() {
 
 	editorDrawRows(ab)
 	editorDrawStatusBar(ab)
+	editorDrawMessageBar(ab)
 
 	abAppend(ab, fmt.Sprintf("\x1b[%d;%dH",
 		(e.cy-e.rowOff)+1, (e.rx-e.colOff)+1))
@@ -410,6 +427,14 @@ func editorRefreshScreen() {
 	abAppend(ab, "\x1b[?25h")
 
 	syscall.Write(unix.Stdout, []byte(ab.b))
+}
+
+func editorSetStatusMessage(f string, a ...string) {
+	if len(a) == 0 {
+		e.statusMsg = f
+		return
+	}
+	e.statusMsg = fmt.Sprintf(f, a)
 }
 
 // init
@@ -422,9 +447,11 @@ func initEditor() {
 	e.colOff = 0
 	e.rows = make([]erow, 0)
 	e.fileName = ""
+	e.statusMsg = ""
+	e.statusMsgTime = time.Now()
 
 	getWindowSize(&e.screenRows, &e.screeenCols)
-	e.screenRows--
+	e.screenRows -= 2
 }
 
 func main() {
@@ -441,6 +468,8 @@ func main() {
 	if len(os.Args) >= 2 {
 		editorOpen(os.Args[1])
 	}
+
+	editorSetStatusMessage("HELP: Ctrl-Q = quit")
 
 	for persist := true; persist; {
 		editorRefreshScreen()
