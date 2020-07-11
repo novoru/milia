@@ -16,6 +16,9 @@ const MilliaVersion string = "0.0.1"
 // MilliaTabStop length of a tab stop
 const MilliaTabStop int = 8
 
+// MilliaQuitTimes press Ctrl-Q three more times to quit without saving
+const MilliaQuitTimes int = 3
+
 func ctrlKey(k byte) int {
 	return int(k & 0x1F)
 }
@@ -58,6 +61,7 @@ type editorConfig struct {
 	screenRows    uint16
 	screeenCols   uint16
 	rows          []erow
+	dirty         bool
 	fileName      string
 	statusMsg     string
 	statusMsgTime time.Time
@@ -65,6 +69,7 @@ type editorConfig struct {
 }
 
 var e editorConfig
+var quitTimes int = MilliaQuitTimes
 
 // terminal
 func die() {
@@ -215,6 +220,14 @@ func editorProcessKeypress() bool {
 		// TODO
 		break
 	case ctrlKey('q'):
+		if e.dirty && quitTimes > 0 {
+			editorSetStatusMessage("WARNING!!! File has unsaved changes. "+
+				"Press Ctrl-Q %d more times to quit.", quitTimes)
+			quitTimes--
+			return true
+		}
+		syscall.Write(unix.Stdout, []byte("\x1b[2J"))
+		syscall.Write(unix.Stdout, []byte("\x1b[H"))
 		return false
 	case ctrlKey('s'):
 		editorSave()
@@ -251,6 +264,7 @@ func editorProcessKeypress() bool {
 		editorInsertChar(c)
 	}
 
+	quitTimes = MilliaQuitTimes
 	return true
 }
 
@@ -300,6 +314,7 @@ func editorUpdateRow(row *erow) {
 func editorAppendRow(s string) {
 	e.rows = append(e.rows, erow{s, ""})
 	editorUpdateRow(&e.rows[len(e.rows)-1])
+	e.dirty = true
 }
 
 func editorRowInsertChar(row *erow, at int, c int) {
@@ -318,6 +333,7 @@ func editorInsertChar(c int) {
 	}
 	editorRowInsertChar(&e.rows[e.cy], e.cx, c)
 	e.cx++
+	e.dirty = true
 }
 
 // file I/O
@@ -345,6 +361,7 @@ func editorOpen(fileName string) {
 	for scanner.Scan() {
 		editorAppendRow(scanner.Text())
 	}
+	e.dirty = false
 }
 
 func editorSave() {
@@ -364,7 +381,7 @@ func editorSave() {
 	if err != nil {
 		panic(err)
 	}
-	e.statusMsgTime = time.Now()
+	e.dirty = false
 	editorSetStatusMessage("%d bytes written to disk", n)
 }
 
@@ -438,6 +455,9 @@ func editorDrawStatusBar(ab *abuf) {
 	fileName := "[No Name]"
 	if e.fileName != "" {
 		fileName = e.fileName
+		if e.dirty {
+			fileName = "(modified)" + fileName
+		}
 	}
 
 	status := fmt.Sprintf("%.20s - %d lines", fileName, len(e.rows))
@@ -494,6 +514,7 @@ func editorRefreshScreen() {
 
 func editorSetStatusMessage(f string, a ...interface{}) {
 	e.statusMsg = fmt.Sprintf(f, a...)
+	e.statusMsgTime = time.Now()
 }
 
 // init
@@ -505,6 +526,7 @@ func initEditor() {
 	e.rowOff = 0
 	e.colOff = 0
 	e.rows = make([]erow, 0)
+	e.dirty = false
 	e.fileName = ""
 	e.statusMsg = ""
 	e.statusMsgTime = time.Now()
