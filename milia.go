@@ -216,6 +216,8 @@ func editorProcessKeypress() bool {
 		break
 	case ctrlKey('q'):
 		return false
+	case ctrlKey('s'):
+		editorSave()
 	case HomeKey:
 		e.cx = 0
 	case EndKey:
@@ -320,11 +322,20 @@ func editorInsertChar(c int) {
 
 // file I/O
 
-func editorOpen(fileName string) {
-	file, err := os.Open(fileName)
-	defer file.Close()
+func editorRowsToString() string {
+	buf := ""
 
+	for i := 0; i < len(e.rows); i++ {
+		buf += e.rows[i].s + "\n"
+	}
+
+	return buf
+}
+
+func editorOpen(fileName string) {
 	e.fileName = fileName
+	file, err := os.OpenFile(e.fileName, os.O_RDWR|os.O_CREATE, 0644)
+	defer file.Close()
 
 	if err != nil {
 		panic(err)
@@ -334,6 +345,27 @@ func editorOpen(fileName string) {
 	for scanner.Scan() {
 		editorAppendRow(scanner.Text())
 	}
+}
+
+func editorSave() {
+	if e.fileName == "" {
+		return
+	}
+
+	file, err := os.OpenFile(e.fileName, os.O_RDWR|os.O_CREATE, 0644)
+	defer file.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	buf := editorRowsToString()
+
+	n, err := file.Write([]byte(buf))
+	if err != nil {
+		panic(err)
+	}
+	e.statusMsgTime = time.Now()
+	editorSetStatusMessage("%d bytes written to disk", n)
 }
 
 // append buffer
@@ -460,12 +492,8 @@ func editorRefreshScreen() {
 	syscall.Write(unix.Stdout, []byte(ab.b))
 }
 
-func editorSetStatusMessage(f string, a ...string) {
-	if len(a) == 0 {
-		e.statusMsg = f
-		return
-	}
-	e.statusMsg = fmt.Sprintf(f, a)
+func editorSetStatusMessage(f string, a ...interface{}) {
+	e.statusMsg = fmt.Sprintf(f, a...)
 }
 
 // init
