@@ -131,19 +131,24 @@ func editorMoveCursor(key int) {
 	case ArrowUp:
 		if e.cy != 0 {
 			e.cy--
-			if len(e.rows[e.cy].render) < e.cx {
-				e.cx = len(e.rows[e.cy].render)
-			}
 		}
 	case ArrowDown:
 		if e.cy != len(e.rows) {
 			e.cy++
-			if e.cy < len(e.rows) {
-				if len(e.rows[e.cy].render) < e.cx {
-					e.cx = len(e.rows[e.cy].render)
-				}
-			}
 		}
+	}
+
+	if e.cy >= len(e.rows) {
+		row = erow{}
+	} else {
+		row = e.rows[e.cy]
+	}
+	rowLen := 0
+	if row != (erow{}) {
+		rowLen = len(row.s)
+	}
+	if e.cx > rowLen {
+		e.cx = rowLen
 	}
 }
 
@@ -314,6 +319,11 @@ func editorUpdateRow(row *erow) {
 
 }
 
+func editorFreeRow(row *erow) {
+	row.render = ""
+	row.s = ""
+}
+
 func editorAppendRow(s string) {
 	e.rows = append(e.rows, erow{s, ""})
 	editorUpdateRow(&e.rows[len(e.rows)-1])
@@ -324,6 +334,7 @@ func editorDelRow(at int) {
 	if at < 0 || at >= len(e.rows) {
 		return
 	}
+	editorFreeRow(&e.rows[at])
 	e.rows = append(e.rows[:at], e.rows[at+1:]...)
 	e.dirty = true
 }
@@ -334,6 +345,12 @@ func editorRowInsertChar(row *erow, at int, c int) {
 	}
 	row.s = row.s[:at] + string(c) + row.s[at:]
 	editorUpdateRow(row)
+}
+
+func editorRowAppendString(row *erow, s string) {
+	row.s += s
+	editorUpdateRow(row)
+	e.dirty = true
 }
 
 func editorRowDelChar(row *erow, at int) {
@@ -361,10 +378,19 @@ func editorDelChar() {
 	if e.cy == len(e.rows) {
 		return
 	}
+	if e.cx == 0 && e.cy == 0 {
+		return
+	}
 
+	row := &e.rows[e.cy]
 	if e.cx > 0 {
 		editorRowDelChar(&e.rows[e.cy], e.cx-1)
 		e.cx--
+	} else {
+		e.cx = len(e.rows[e.cy-1].s)
+		editorRowAppendString(&e.rows[e.cy-1], row.s)
+		editorDelRow(e.cy)
+		e.cy--
 	}
 }
 
