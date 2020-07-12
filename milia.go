@@ -238,7 +238,10 @@ func editorProcessKeypress() bool {
 			e.cx = len(e.rows[e.cy].s)
 		}
 	case BackSpace, ctrlKey('h'), DelKey:
-		// TODO
+		if c == DelKey {
+			editorMoveCursor(ArrowRight)
+		}
+		editorDelChar()
 		break
 	case PageUp, PageDown:
 		if c == PageUp {
@@ -317,12 +320,30 @@ func editorAppendRow(s string) {
 	e.dirty = true
 }
 
+func editorDelRow(at int) {
+	if at < 0 || at >= len(e.rows) {
+		return
+	}
+	e.rows = append(e.rows[:at], e.rows[at+1:]...)
+	e.dirty = true
+}
+
 func editorRowInsertChar(row *erow, at int, c int) {
 	if at < 0 || at > len(row.s) {
 		at = len(row.s)
 	}
 	row.s = row.s[:at] + string(c) + row.s[at:]
 	editorUpdateRow(row)
+}
+
+func editorRowDelChar(row *erow, at int) {
+	if at < 0 || at >= len(row.s) {
+		return
+	}
+
+	row.s = row.s[:at] + row.s[at+1:]
+	editorUpdateRow(row)
+	e.dirty = true
 }
 
 // editor operations
@@ -334,6 +355,17 @@ func editorInsertChar(c int) {
 	editorRowInsertChar(&e.rows[e.cy], e.cx, c)
 	e.cx++
 	e.dirty = true
+}
+
+func editorDelChar() {
+	if e.cy == len(e.rows) {
+		return
+	}
+
+	if e.cx > 0 {
+		editorRowDelChar(&e.rows[e.cy], e.cx-1)
+		e.cx--
+	}
 }
 
 // file I/O
@@ -369,7 +401,7 @@ func editorSave() {
 		return
 	}
 
-	file, err := os.OpenFile(e.fileName, os.O_RDWR|os.O_CREATE, 0644)
+	file, err := os.OpenFile(e.fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	defer file.Close()
 	if err != nil {
 		panic(err)
