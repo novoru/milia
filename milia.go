@@ -122,9 +122,9 @@ func editorMoveCursor(key int) {
 			e.cx = len(e.rows[e.cy].s)
 		}
 	case ArrowRight:
-		if row.s != "" && e.cx < len(row.s) {
+		if e.cy < len(e.rows) && e.cx < len(row.s) {
 			e.cx++
-		} else if row.s != "" && e.cx == len(row.s) {
+		} else if e.cy < len(e.rows) && e.cx == len(row.s) {
 			e.cy++
 			e.cx = 0
 		}
@@ -222,7 +222,7 @@ func editorReadKey() int {
 func editorProcessKeypress() bool {
 	switch c := editorReadKey(); c {
 	case '\r':
-		// TODO
+		editorInsertNewline()
 		break
 	case ctrlKey('q'):
 		if e.dirty && quitTimes > 0 {
@@ -324,9 +324,17 @@ func editorFreeRow(row *erow) {
 	row.s = ""
 }
 
-func editorAppendRow(s string) {
-	e.rows = append(e.rows, erow{s, ""})
-	editorUpdateRow(&e.rows[len(e.rows)-1])
+func editorInsertRow(at int, s string) {
+	if at < 0 || at > len(e.rows) {
+		return
+	}
+
+	// e.rows = append(append(e.rows[:at], erow{"", ""}), e.rows[at:]...)
+	e.rows = append(e.rows, erow{"", ""})
+	copy(e.rows[at+1:], e.rows[at:])
+	e.rows[at].s = s
+	editorUpdateRow(&e.rows[at])
+
 	e.dirty = true
 }
 
@@ -367,11 +375,25 @@ func editorRowDelChar(row *erow, at int) {
 
 func editorInsertChar(c int) {
 	if e.cy == len(e.rows) {
-		editorAppendRow("")
+		editorInsertRow(len(e.rows), "")
 	}
 	editorRowInsertChar(&e.rows[e.cy], e.cx, c)
 	e.cx++
 	e.dirty = true
+}
+
+func editorInsertNewline() {
+	if e.cx == 0 {
+		editorInsertRow(e.cy, "")
+	} else {
+		row := &e.rows[e.cy]
+		editorInsertRow(e.cy+1, row.s[e.cx:])
+		row = &e.rows[e.cy]
+		row.s = row.s[:e.cx]
+		editorUpdateRow(row)
+	}
+	e.cy++
+	e.cx = 0
 }
 
 func editorDelChar() {
@@ -417,7 +439,7 @@ func editorOpen(fileName string) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		editorAppendRow(scanner.Text())
+		editorInsertRow(len(e.rows), scanner.Text())
 	}
 	e.dirty = false
 }
