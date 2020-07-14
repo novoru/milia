@@ -6,6 +6,7 @@ import (
 	"os"
 	"syscall"
 	"time"
+	"unicode"
 
 	"golang.org/x/sys/unix"
 )
@@ -107,6 +108,33 @@ func disableRawMode() {
 }
 
 // input
+
+func editorPrompt(prompt string) string {
+	buf := ""
+
+	for {
+		editorSetStatusMessage(prompt, buf)
+		editorRefreshScreen()
+
+		c := editorReadKey()
+		if c == DelKey || c == ctrlKey('h') || c == BackSpace {
+			if len(buf) > 0 {
+				buf = buf[:len(buf)-1]
+			}
+		} else if c == '\x1b' {
+			editorSetStatusMessage("")
+			return ""
+		} else if c == '\r' {
+			if len(buf) != 0 {
+				editorSetStatusMessage("")
+				return buf
+			}
+		} else if !unicode.IsControl(rune(c)) && c < 128 {
+			buf += string(c)
+		}
+	}
+}
+
 func editorMoveCursor(key int) {
 	var row erow
 	if e.cy < len(e.rows) {
@@ -446,7 +474,11 @@ func editorOpen(fileName string) {
 
 func editorSave() {
 	if e.fileName == "" {
-		return
+		e.fileName = editorPrompt("Save as: %s")
+		if e.fileName == "" {
+			editorSetStatusMessage("Save aborted")
+			return
+		}
 	}
 
 	file, err := os.OpenFile(e.fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
